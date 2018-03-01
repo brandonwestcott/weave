@@ -79,7 +79,11 @@ func (i *mockIPSet) entryExists(ipsetName ipset.Name, entry string) bool {
 }
 
 func (i *mockIPSet) Flush(ipsetName ipset.Name) error {
-	return errors.New("Not Implemented")
+	if _, ok := i.sets[string(ipsetName)]; !ok {
+		return errors.Errorf("ipset %s does not exist", ipsetName)
+	}
+	delete(i.sets, string(ipsetName))
+	return nil
 }
 
 func (i *mockIPSet) FlushAll() error {
@@ -294,6 +298,11 @@ func TestDefaultAllow(t *testing.T) {
 	controller.DeletePod(podFoo)
 	// Should remove foo pod from default-allow
 	require.False(t, m.entryExists(defaultAllowIPSetName, fooPodIP))
+
+	controller.DeleteNamespace(defaultNamespace)
+	// Should remove default ipset
+	require.NotContains(t, m.sets, defaultAllowIPSetName)
+
 }
 
 func TestOutOfOrderPodEvents(t *testing.T) {
